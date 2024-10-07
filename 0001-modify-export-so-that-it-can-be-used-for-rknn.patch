@@ -1,0 +1,43 @@
+From 690fd4aa75d62c267f2651c0f1db6757b1b540df Mon Sep 17 00:00:00 2001
+From: enpeizhao <hi@enpeizhao.com>
+Date: Mon, 4 Sep 2023 20:56:43 +0800
+Subject: [PATCH] modify export so that it can be used for rknn
+
+---
+ export.py      | 3 ++-
+ models/yolo.py | 5 +++++
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/export.py b/export.py
+index 92d4247..eaa7db9 100644
+--- a/export.py
++++ b/export.py
+@@ -757,7 +757,8 @@ def run(
+         y = model(im)  # dry runs
+     if half and not coreml:
+         im, model = im.half(), model.half()  # to FP16
+-    shape = tuple((y[0] if isinstance(y, tuple) else y).shape)  # model output shape
++    ## shape = tuple((y[0] if isinstance(y, tuple) else y).shape)  # model output shape
++    shape = tuple((y[0] if (isinstance(y, tuple) or (isinstance(y, list))) else y).shape)  # model output shape
+     metadata = {'stride': int(max(model.stride)), 'names': model.names}  # model metadata
+     LOGGER.info(f"\n{colorstr('PyTorch:')} starting from {file} with output shape {shape} ({file_size(file):.1f} MB)")
+ 
+diff --git a/models/yolo.py b/models/yolo.py
+index 4f4d567..8aaa890 100644
+--- a/models/yolo.py
++++ b/models/yolo.py
+@@ -54,6 +54,11 @@ class Detect(nn.Module):
+         self.inplace = inplace  # use inplace ops (e.g. slice assignment)
+ 
+     def forward(self, x):
++        z = []  # inference output
++        for i in range(self.nl):
++            z.append(self.m[i](x[i]))
++
++        return z
+         z = []  # inference output
+         for i in range(self.nl):
+             x[i] = self.m[i](x[i])  # conv
+-- 
+2.39.2 (Apple Git-143)
+
